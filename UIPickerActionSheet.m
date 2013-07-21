@@ -165,7 +165,8 @@
     [self.sheet dismissWithClickedButtonIndex:0 animated:YES];
     if (self.dismissHandler)
     {
-        self.dismissHandler(_pickerMode,NO,[(UIDatePicker *)self.picker date],self.tag);
+        id item = (_pickerMode == UIPickerActionSheetModeDate)?[(UIDatePicker *)self.picker date]:self.selectedItem;
+        self.dismissHandler(_pickerMode,NO,item,self.tag);
         return;
     }
     if (self.delegate && [self.delegate respondsToSelector:@selector(pickerActionSheet:didSelectItem:)])
