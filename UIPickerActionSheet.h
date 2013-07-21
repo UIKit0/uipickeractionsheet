@@ -27,19 +27,26 @@
 
 #import <Foundation/Foundation.h>
 
+typedef NS_ENUM(NSInteger, UIPickerActionSheetMode)
+{
+    UIPickerActionSheetModeItems,
+    UIPickerActionSheetModeDate
+};
+
+typedef void (^PickerDismissedHandler)(UIPickerActionSheetMode pickerMode, BOOL cancelled, id item, int tag);
+
 @protocol UIPickerActionSheetDelegate;
 
-@interface UIPickerActionSheet : NSObject<UIPickerViewDataSource, UIPickerViewDelegate>
+@interface UIPickerActionSheet : NSObject
 
-@property (nonatomic, assign) id<UIPickerActionSheetDelegate> delegate;
-@property (nonatomic, strong) UIView *containerView;
-@property (nonatomic, strong) UIActionSheet *sheet;
-@property (nonatomic, strong) UIPickerView *picker;
-@property (nonatomic, strong) NSArray *items;
-@property (nonatomic, strong) id selectedItem;
+@property (weak,nonatomic) id<UIPickerActionSheetDelegate> delegate;
+@property (assign) int tag;
 
-- (id)initForView:(UIView*)aView;
-- (void)show:(NSArray*)aItems;
+- (id)initForView:(UIView *)view mode:(UIPickerActionSheetMode)actionSheetMode;
+
+// Item can be either NSArray or NSDate
+- (void)show:(id)item;
+- (void)show:(id)item withDismissHandler:(PickerDismissedHandler)dismissHandler;
 
 @end
 

@@ -27,28 +27,37 @@
 
 #import "UIPickerActionSheet.h"
 
-@interface UIPickerActionSheet ()
+@interface UIPickerActionSheet () <UIPickerViewDataSource, UIPickerViewDelegate>
 
-- (void)initSheetWithWidth:(CGFloat)aWidth;
+@property (copy) PickerDismissedHandler dismissHandler;
+
+@property (nonatomic, strong) UIView *containerView;
+@property (nonatomic, strong) UIActionSheet *sheet;
+@property (nonatomic, strong) UIPickerView *picker;
+@property (nonatomic, strong) NSArray *items;
+@property (nonatomic, strong) id selectedItem;
 
 @end
 
 @implementation UIPickerActionSheet
+{
+    UIPickerActionSheetMode _pickerMode;
+}
 
-- (id)initForView:(UIView*)aView
+- (id)initForView:(UIView *)view mode:(UIPickerActionSheetMode)actionSheetMode
 {
     if (self = [super init])
     {
-        self.containerView = aView;
-        [self initSheetWithWidth:aView.bounds.size.width];
+        _pickerMode = actionSheetMode;
+        [self setContainerView:view];
+        [self initSheetWithWidth:view.bounds.size.width mode:actionSheetMode];
     }
     return self;
 }
 
-- (void)initSheetWithWidth:(CGFloat)aWidth
+- (void)initSheetWithWidth:(CGFloat)aWidth mode:(UIPickerActionSheetMode)actionSheetMode
 {
     UIActionSheet *sheet = [[UIActionSheet alloc] init];
-    
     UIToolbar *toolbar = [[UIToolbar alloc]
                           initWithFrame:CGRectMake(0, 0, aWidth, 0)];
     toolbar.barStyle = UIBarStyleBlackOpaque;
@@ -57,13 +66,26 @@
     [toolbar setItems:@[
      [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel target:self action:@selector(pickerSheetCancel)],
      [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil],
-     [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(pickerSheetDone)]
-     ]];
+     [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(pickerSheetDone)]]];
     
-    UIPickerView *picker = [[UIPickerView alloc]
-                            initWithFrame:CGRectMake(0, toolbar.bounds.size.height, aWidth, 0)];
-    picker.showsSelectionIndicator = YES;
-    picker.delegate = self;
+    id picker;
+    CGRect pickerFrame = CGRectMake(0, toolbar.bounds.size.height, aWidth, 0);
+    switch (actionSheetMode)
+    {
+        case UIPickerActionSheetModeItems:
+        {
+            picker = [[UIPickerView alloc] initWithFrame:pickerFrame];
+            [picker setShowsSelectionIndicator:YES];
+            [picker setDelegate:self];
+        }
+            break;
+        case UIPickerActionSheetModeDate:
+        {
+            picker = [[UIDatePicker alloc] initWithFrame:pickerFrame];
+            [picker setDatePickerMode:UIDatePickerModeDate];
+        }
+        break;
+    }
     
     [sheet addSubview:toolbar];
     [sheet addSubview:picker];
@@ -72,26 +94,37 @@
     self.picker = picker;
 }
 
-- (void)show:(NSArray*)aItems
+- (void)show:(id)item
 {
-    self.items = aItems;
-    
-    // Do not show if items are invalid...
-    if (!self.items || self.items.count <= 0)
-        return;
+    if (!self.tag) self.tag = NSNotFound;
     
     [self.sheet showInView:self.containerView];
     
     // XXX: Kinda hacky, but seems to be the only way to make it display correctly.
-    [self.sheet
-     setBounds:CGRectMake(0, 0,
-                          self.containerView.frame.size.width,
-                          self.sheet.frame.size.height + 478.0)];
+    [UIView animateWithDuration:0.3 animations:^
+    {
+        [self.sheet setBounds:CGRectMake(0, 0, self.containerView.frame.size.width, self.sheet.frame.size.height + 478.0)];
+    }];
     
-    // Reload and select first item
-    [self.picker reloadComponent:0];
-    [self.picker selectRow:0 inComponent:0 animated:NO];
-    [self.picker.delegate pickerView:self.picker didSelectRow:0 inComponent:0];
+    if (_pickerMode == UIPickerActionSheetModeItems)
+    {
+        if (![item isKindOfClass:[NSArray class]] || ![item count]) return;
+        self.items = item;
+        [self.picker selectRow:0 inComponent:0 animated:NO];
+        [self.picker.delegate pickerView:self.picker didSelectRow:0 inComponent:0];
+        [self.picker reloadComponent:0];
+    }
+    if (_pickerMode == UIPickerActionSheetModeDate)
+    {
+        if (![item isKindOfClass:[NSDate class]]) return;
+        [(UIDatePicker *)self.picker setDate:item animated:NO];
+    }
+}
+
+- (void)show:(id)item withDismissHandler:(PickerDismissedHandler)dismissHandler;
+{
+    [self show:item];
+    self.dismissHandler = dismissHandler;
 }
 
 - (int)numberOfComponentsInPickerView:(UIPickerView*)aPickerView
@@ -118,6 +151,11 @@
 - (void)pickerSheetCancel
 {
     [self.sheet dismissWithClickedButtonIndex:0 animated:YES];
+    if (self.dismissHandler)
+    {
+        self.dismissHandler(_pickerMode,YES,nil,self.tag);
+        return;
+    }
     if (self.delegate && [self.delegate respondsToSelector:@selector(pickerActionSheetDidCancel:)])
         [self.delegate pickerActionSheetDidCancel:self];
 }
@@ -125,6 +163,11 @@
 - (void)pickerSheetDone
 {
     [self.sheet dismissWithClickedButtonIndex:0 animated:YES];
+    if (self.dismissHandler)
+    {
+        self.dismissHandler(_pickerMode,NO,[(UIDatePicker *)self.picker date],self.tag);
+        return;
+    }
     if (self.delegate && [self.delegate respondsToSelector:@selector(pickerActionSheet:didSelectItem:)])
         [self.delegate pickerActionSheet:self didSelectItem:self.selectedItem];
 }
