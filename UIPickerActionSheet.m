@@ -42,6 +42,7 @@
 @implementation UIPickerActionSheet
 {
     UIPickerActionSheetMode _pickerMode;
+    NSDate *_lastPickedDateValue;
 }
 
 - (id)initForView:(UIView *)view mode:(UIPickerActionSheetMode)actionSheetMode
@@ -117,8 +118,33 @@
     if (_pickerMode == UIPickerActionSheetModeDate)
     {
         if (![item isKindOfClass:[NSDate class]]) return;
+        _lastPickedDateValue = item;
         [(UIDatePicker *)self.picker setDate:item animated:NO];
+        [(UIDatePicker *)self.picker setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
+        [(UIDatePicker *)self.picker addTarget:self action:@selector(dateChanged:) forControlEvents:UIControlEventValueChanged];
     }
+}
+
+- (IBAction)dateChanged:(id)sender
+{
+    UIDatePicker *datePicker = sender;
+    NSDate *currentDate = [(UIDatePicker *)self.picker date];
+    switch ([currentDate compare:_lastPickedDateValue])
+    {
+        case NSOrderedAscending:
+            
+            break;
+        case NSOrderedDescending:
+            if ([currentDate year] > [_lastPickedDateValue year])
+            {
+                [datePicker setDate:[NSDate dateWithString:[NSString stringWithFormat:@"1.1.%i",[currentDate year]] withFormat:kDefaultTimeStringFormat]];
+            }
+            break;
+        case NSOrderedSame:
+            return;
+            break;
+    }
+    _lastPickedDateValue = currentDate;
 }
 
 - (void)show:(id)item withDismissHandler:(PickerDismissedHandler)dismissHandler;
@@ -171,6 +197,11 @@
     }
     if (self.delegate && [self.delegate respondsToSelector:@selector(pickerActionSheet:didSelectItem:)])
         [self.delegate pickerActionSheet:self didSelectItem:self.selectedItem];
+}
+
+- (id)activePicker
+{
+    return self.picker;
 }
 
 @end

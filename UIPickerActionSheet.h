@@ -42,6 +42,8 @@ typedef void (^PickerDismissedHandler)(UIPickerActionSheetMode pickerMode, BOOL 
 @property (weak,nonatomic) id<UIPickerActionSheetDelegate> delegate;
 @property (assign) int tag;
 
+- (id)activePicker;
+
 - (id)initForView:(UIView *)view mode:(UIPickerActionSheetMode)actionSheetMode;
 
 // Item can be either NSArray or NSDate
