@@ -1,6 +1,7 @@
+NOTE: requires https://github.com/erica/NSDate-Extensions
+
 UIPickerActionSheet
 ===
----
 
 UIPickerActionSheet is a class that displays (you guessed it) a UIPickerView inside a UIActionSheet. It can be used as a single selection widget for users to select one value. It includes a "Cancel" and a "Done" button, Safari-style.
 
